@@ -224,9 +224,10 @@ impl<'src> Recipe<'src> {
   pub(crate) fn run<'run>(
     &self,
     context: &ExecutionContext<'src, 'run>,
-    scope: &Scope<'src, 'run>,
-    positional: &[String],
+    env: &BTreeMap<String, String>,
     is_dependency: bool,
+    positional: &[String],
+    scope: &Scope<'src, 'run>,
   ) -> RunResult<'src> {
     let color = context.config.color.stderr().banner();
     let prefix = color.prefix();
@@ -249,9 +250,9 @@ impl<'src> Recipe<'src> {
 
     let start = Instant::now();
     let result = if self.is_script() {
-      self.run_script(context, scope, positional, evaluator)
+      self.run_script(context, env, evaluator, positional, scope)
     } else {
-      self.run_linewise(context, scope, positional, evaluator)
+      self.run_linewise(context, env, evaluator, positional, scope)
     };
     let elapsed = start.elapsed();
 
@@ -279,9 +280,10 @@ impl<'src> Recipe<'src> {
   fn run_linewise<'run>(
     &self,
     context: &ExecutionContext<'src, 'run>,
-    scope: &Scope<'src, 'run>,
-    positional: &[String],
+    env: &BTreeMap<String, String>,
     mut evaluator: Evaluator<'src, 'run>,
+    positional: &[String],
+    scope: &Scope<'src, 'run>,
   ) -> RunResult<'src> {
     let config = &context.config;
     let settings = &context.module.settings;
@@ -380,10 +382,8 @@ impl<'src> Recipe<'src> {
 
       cmd.export(settings, context.dotenv, scope, &context.module.unexports);
 
-      for attribute in &self.attributes {
-        if let Attribute::Env(key, value) = attribute {
-          cmd.env(&key.cooked, &value.cooked);
-        }
+      for (key, value) in env {
+        cmd.env(key, value);
       }
 
       let (result, caught) = cmd.status_guard();
@@ -440,9 +440,10 @@ impl<'src> Recipe<'src> {
   pub(crate) fn run_script<'run>(
     &self,
     context: &ExecutionContext<'src, 'run>,
-    scope: &Scope<'src, 'run>,
-    positional: &[String],
+    env: &BTreeMap<String, String>,
     mut evaluator: Evaluator<'src, 'run>,
+    positional: &[String],
+    scope: &Scope<'src, 'run>,
   ) -> RunResult<'src> {
     let config = &context.config;
 
@@ -550,10 +551,8 @@ impl<'src> Recipe<'src> {
       &context.module.unexports,
     );
 
-    for attribute in &self.attributes {
-      if let Attribute::Env(key, value) = attribute {
-        command.env(&key.cooked, &value.cooked);
-      }
+    for (key, value) in env {
+      command.env(key, value);
     }
 
     // run it!

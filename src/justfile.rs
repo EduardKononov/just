@@ -447,7 +447,7 @@ impl<'src> Justfile<'src> {
       search,
     };
 
-    let (outer, positional) = Evaluator::evaluate_parameters(
+    let (outer, positional, env) = Evaluator::evaluate_parameters(
       arguments,
       &context,
       is_dependency,
@@ -478,7 +478,7 @@ impl<'src> Justfile<'src> {
       search,
     )?;
 
-    recipe.run(&context, &scope, &positional, is_dependency)?;
+    recipe.run(&context, &env, is_dependency, &positional, &scope)?;
 
     Self::run_dependencies(
       config,
